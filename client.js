@@ -20,10 +20,9 @@ leitor.question("Informe o host: ", (host) => {
                 var stdin = process.openStdin(); 
                 stdin.setRawMode(true);
                 var client = dgram.createSocket('udp4');
-                var server = dgram.createSocket('udp4');
                 let serverPort = 3002 + parseInt(player);
 
-                server.bind(serverPort, ip, () => {
+                client.bind(serverPort, ip, () => {
                     console.log("Escutando em: ", ip, serverPort);
                 });
                 
@@ -37,8 +36,8 @@ leitor.question("Informe o host: ", (host) => {
                             "direction": (key == 'w') ? -1 : 1,
                             "num_pacote": pacotes.length + 1
                         }
-                        pacotes.push(pacote);
                         let message = new Buffer(JSON.stringify(pacote));
+                        pacotes.push(message);
                         client.send(message, 0, message.length, port, host, function(err) {
                             if (err) throw err;
                             console.log('movimento enviado para o servidor: ' + host +':'+ port);
@@ -46,11 +45,13 @@ leitor.question("Informe o host: ", (host) => {
                     }
                 });
 
-                server.on('message', (message, remote) => {
+                client.on('message', (pacoteJSON) => {
                     console.log("mensagem recebida");
+                    let message = JSON.parse(pacoteJSON);
                     if(message['type'] == 'not received') {
-                        let message = new Buffer(JSON.stringify(pacotes[message['num_pacote']]));
-                        client.send(message, 0, message.length, port, host, function(err) {
+                        let index = message['num_pacote'] - 1;
+                        console.log(JSON.parse(pacotes[index]));
+                        client.send(pacotes[index], 0, pacotes[index].length, port, host, function(err) {
                             if (err) throw err;
                             console.log('movimento reenviado para o servidor: ' + host +':'+ port);
                         });

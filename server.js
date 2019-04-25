@@ -13,7 +13,7 @@ http.listen(PORT_TCP, () => {
 const PORT_UDP = 3002;
 var dgram = require('dgram');
 var serverUDP = dgram.createSocket('udp4');
-serverUDP.bind(PORT_UDP, "127.0.0.1", () => {
+serverUDP.bind(PORT_UDP, "192.168.0.106", () => {
 	console.log('UDP na porta ' + PORT_UDP);
 });
 
@@ -162,14 +162,18 @@ ioTCP.on('connection', function(socket) {
 	});
 });
 
-let pacotes_pendentes = [[], []]; // cada índice representa um player
+let pacotes_pendentes = [new Array(), new Array()]; // cada índice representa um player
 let proximo_pacote_players = [1,1]; // cada índice representa um player
 
 serverUDP.on("message", (pacote, remote) => {
+	if(pacote == null)
+		return;
+
 	let pacoteJSON = JSON.parse(pacote);
 	let proximo_pacote = proximo_pacote_players[pacoteJSON['player']-1];
 	console.log("num: ", pacoteJSON['num_pacote'], "prox: ", proximo_pacote);
-	if(pacoteJSON['num_pacote'] > proximo_pacote) { 
+	let num_pacote = parseInt(pacoteJSON['num_pacote']);
+	if(num_pacote > proximo_pacote) { 
 		// se o pacote recebido não for da ordem esperada 
 		// ...uma mensagem é enviada ao cliente pedindo para que o pacote seja enviado novamente
 		let pacote2 = {
@@ -186,21 +190,26 @@ serverUDP.on("message", (pacote, remote) => {
 		});
 
 		// o pacote recebido é guardado no array do player que enviou
-		pacotes_pendentes[pacoteJSON['player']-1].push(pacoteJSON);
+		let index = parseInt(pacoteJSON['player']) - 1;
+		pacotes_pendentes[index].push(pacoteJSON);
 
-	} else if (pacote['num_pacote'] == proximo_pacote) { 
+	} else if (num_pacote == proximo_pacote) { 
 		// caso seja o pacote esperado, envia-se o mesmo e todos os outros pacotes pendentes
 		playersAssist.forEach((player) => {
 			player['socket'].emit('move paddle ' + pacoteJSON['player'], pacoteJSON['direction']);
-			console.log('move paddle ' + pacote['player'] + ' | direction: ' + pacote['direction']);
+			console.log('move paddle ' + pacoteJSON['player'] + ' | direction: ' + pacoteJSON['direction']);
 			let x = 0;
-			for(; x < pacotes_pendentes.length; x++) {
-				pacote = pacotes_pendentes.shift();
+			let index = parseInt(pacoteJSON['player']) - 1;
+			let pacote_pendente = null;
+			for(; x < pacotes_pendentes[index].length; x++) {
+				pacote_pendente = pacotes_pendentes.shift();
 				player['socket'].emit('move paddle ' + pacote['player'], pacote['direction']);
 				console.log('move paddle ' + pacote['player'] + ' | direction: ' + pacote['direction']);
 			}
-			proximo_pacote = x + 1; // atualiza o número do próximo pacote
-			console.log("x: ", x);
+			proximo_pacote_players[index] = (pacote_pendente != null) 
+				? proximo_pacote_players[index] = pacote_pendente['num_pacote'] + 1
+				: proximo_pacote_players[index] + 1;
+			console.log("prox pac player: ", proximo_pacote_players[index]);
 		});
 	} // caso seja menor que o esperado, ignora-se
 });
