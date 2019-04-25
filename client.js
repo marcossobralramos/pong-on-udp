@@ -46,7 +46,8 @@ leitor.question("Informe o host: ", (host) => {
                     }
                 });
 
-                server.on('message', (message) => {
+                server.on('message', (message, remote) => {
+                    console.log("mensagem recebida");
                     if(message['type'] == 'not received') {
                         let message = new Buffer(JSON.stringify(pacotes[message['num_pacote']]));
                         client.send(message, 0, message.length, port, host, function(err) {
