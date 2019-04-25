@@ -24,7 +24,7 @@ leitor.question("Informe o host: ", (host) => {
                 let serverPort = 3002 + parseInt(player);
 
                 server.bind(serverPort, ip, () => {
-                    console.log("Escutando em: ", host, serverPort);
+                    console.log("Escutando em: ", ip, serverPort);
                 });
                 
                 stdin.on('keypress', function (key) {
@@ -39,9 +39,9 @@ leitor.question("Informe o host: ", (host) => {
                         }
                         pacotes.push(pacote);
                         let message = new Buffer(JSON.stringify(pacote));
-                        client.send(message, 0, message.length, gamePort, gameHost, function(err) {
+                        client.send(message, 0, message.length, port, host, function(err) {
                             if (err) throw err;
-                            console.log('movimento enviado para o servidor: ' + gameHost +':'+ gamePort);
+                            console.log('movimento enviado para o servidor: ' + host +':'+ port);
                         });
                     }
                 });
@@ -49,9 +49,9 @@ leitor.question("Informe o host: ", (host) => {
                 server.on('message', (message) => {
                     if(message['type'] == 'not received') {
                         let message = new Buffer(JSON.stringify(pacotes[message['num_pacote']]));
-                        client.send(message, 0, message.length, gamePort, gameHost, function(err, bytes) {
+                        client.send(message, 0, message.length, port, host, function(err) {
                             if (err) throw err;
-                            console.log('movimento reenviado para o servidor: ' + gameHost +':'+ gamePort);
+                            console.log('movimento reenviado para o servidor: ' + host +':'+ port);
                         });
                     }
                 });
